@@ -4,6 +4,7 @@ pragma solidity ^0.8.19;
 import { Script, console2 } from "forge-std/Script.sol";
 import { IEAS } from "@ethereum-attestation-service/eas-contracts/contracts/IEAS.sol";
 import { ISchemaRegistry } from "@ethereum-attestation-service/eas-contracts/contracts/ISchemaRegistry.sol";
+import { ISchemaResolver } from "@ethereum-attestation-service/eas-contracts/contracts/resolver/ISchemaResolver.sol";
 import { PropUpdateResolver } from "../src/PropUpdateResolver.sol";
 import { NounHolderResolver } from "../src/NounHolderResolver.sol";
 import { NounsPassportResolver } from "../src/NounsPassportResolver.sol";
@@ -125,7 +126,7 @@ contract DeployPassport is Script {
         console2.log("Registering Schema 3 (Builder Passport)...");
         bytes32 schema3UID = registry.register(
             SCHEMA_3,
-            ISchemaRegistry(address(0)), // no external resolver
+            ISchemaResolver(address(0)), // no external resolver
             true                         // revocable — superseded by new versions
         );
         console2.log("Schema 3 UID:");

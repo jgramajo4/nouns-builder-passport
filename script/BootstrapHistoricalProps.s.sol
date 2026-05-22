@@ -32,32 +32,31 @@ import { IPropdates } from "../src/interfaces/IPropdates.sol";
 contract BootstrapHistoricalProps is Script {
     // ─── Fill these in before running ───────────────────────────────────────
 
-    /// @dev Your completed prop IDs (historical)
-    uint256[] internal propIds = [
-        // e.g. 387, 412, 441
-    ];
+    /// @dev Your completed prop IDs (historical) - fill in before running
+    uint256[] internal propIds;
 
-    /// @dev The original PostUpdate tx hash for the final update on each prop.
-    ///      Must correspond 1:1 with propIds above.
-    bytes32[] internal txHashes = [
-        // e.g.
-        // bytes32(0xabc123...),
-        // bytes32(0xdef456...)
-    ];
+    /// @dev The original PostUpdate tx hash for the final update on each prop
+    bytes32[] internal txHashes;
 
     /// @dev Short titles for each completed prop milestone
-    string[] internal titles = [
-        // e.g.
-        // "Nouns dev tooling SDK v2 — completed",
-        // "Nouns public goods explorer — completed"
-    ];
+    string[] internal titles;
 
     /// @dev Evidence URIs (GitHub release, forum post, etc.)
-    string[] internal evidenceURIs = [
-        // e.g.
-        // "https://github.com/yourrepo/releases/tag/v2.0.0",
-        // "https://nouns.wtf/vote/412"
-    ];
+    string[] internal evidenceURIs;
+
+    /// @dev Populate arrays in setUp() so types are unambiguous
+    function setUp() public {
+        // ── Fill these in ────────────────────────────────────────────────
+        // propIds.push(387);
+        // propIds.push(412);
+        //
+        // txHashes.push(bytes32(0xabc123...));
+        //
+        // titles.push("Nouns dev tooling SDK v2 - completed");
+        //
+        // evidenceURIs.push("https://github.com/yourrepo/releases/tag/v2.0.0");
+        // ─────────────────────────────────────────────────────────────────
+    }
 
     // ────────────────────────────────────────────────────────────────────────
 
@@ -87,13 +86,13 @@ contract BootstrapHistoricalProps is Script {
             IPropdates.PropdateInfo memory info = propdates.propdateInfo(propId);
 
             if (!info.isCompleted) {
-                console2.log("Skipping prop %d — not marked completed on Propdates", propId);
+                console2.log("Skipping prop %d - not marked completed on Propdates", propId);
                 skipped++;
                 continue;
             }
 
             if (info.propUpdateAdmin != msg.sender) {
-                console2.log("Skipping prop %d — msg.sender is not propUpdateAdmin", propId);
+                console2.log("Skipping prop %d - msg.sender is not propUpdateAdmin", propId);
                 skipped++;
                 continue;
             }
@@ -107,7 +106,7 @@ contract BootstrapHistoricalProps is Script {
                 txHashes[i]      // original PostUpdate tx hash for auditability
             );
 
-            // Submit attestation — resolver will re-verify on-chain
+            // Submit attestation - resolver will re-verify on-chain
             bytes32 uid = eas.attest(
                 AttestationRequest({
                     schema: schema1UID,
@@ -115,14 +114,14 @@ contract BootstrapHistoricalProps is Script {
                         recipient:      address(0), // no specific recipient for milestones
                         expirationTime: 0,
                         revocable:      false,
-                        refUID:         bytes32(0), // first milestone per prop — chain from here
+                        refUID:         bytes32(0), // first milestone per prop - chain from here
                         data:           data,
                         value:          0
                     })
                 })
             );
 
-            console2.log("Prop %d attested — UID:", propId);
+            console2.log("Prop %d attested - UID:", propId);
             console2.logBytes32(uid);
             succeeded++;
         }

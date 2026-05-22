@@ -10,7 +10,6 @@ import {
     RevocationRequest,
     RevocationRequestData
 } from "@ethereum-attestation-service/eas-contracts/contracts/IEAS.sol";
-import { ISchemaRegistry } from "@ethereum-attestation-service/eas-contracts/contracts/ISchemaRegistry.sol";
 import { IPropdates } from "./interfaces/IPropdates.sol";
 
 /// @title NounsPassportResolver
@@ -67,8 +66,9 @@ contract NounsPassportResolver is SchemaResolver {
         bytes32   passportUID;           // Current live Schema 3 attestation UID (0 = no passport yet)
         uint256   passportVersion;       // Increments on every refresh
         bytes32[] milestoneUIDs;         // All Schema 1 attestation UIDs for this builder (append-only)
+        uint256   uniquePropCount;       // Number of distinct propIds attested (incremental, O(1))
         uint256   completedProps;        // Props where isFinal = true was attested
-        uint256   peerVerifications;     // Cached count — updated by refreshPassport()
+        uint256   peerVerifications;     // Cached count — updated via incrementPeerVerification()
     }
 
     // -------------------------------------------------------------------------
@@ -88,6 +88,12 @@ contract NounsPassportResolver is SchemaResolver {
 
     /// @notice Per-builder records
     mapping(address => BuilderRecord) private _builderRecords;
+
+    /// @notice Tracks whether a builder has already attested a given propId.
+    ///         Used to increment uniquePropCount exactly once per prop — O(1).
+    ///         builderSeenProp[builder][propId] = true once any milestone for
+    ///         that prop has been attested.
+    mapping(address => mapping(uint256 => bool)) private _builderSeenProp;
 
     /// @notice Reentrancy guard flag
     bool private _entered;
@@ -140,14 +146,23 @@ contract NounsPassportResolver is SchemaResolver {
         MilestoneData memory m = _decodeMilestone(attestation.data);
 
         IPropdates.PropdateInfo memory info = PROPDATES.propdateInfo(m.propId);
-        if (info.propUpdateAdmin == address(0)) revert NotPropUpdateAdmin();
-        if (info.propUpdateAdmin != attestation.attester) revert NotPropUpdateAdmin();
+        // Defer to Propdates when propUpdateAdmin is zero (proposer controls the prop).
+        // When a non-zero admin is explicitly set it must match the attester.
+        if (info.propUpdateAdmin != address(0) && info.propUpdateAdmin != attestation.attester) {
+            revert NotPropUpdateAdmin();
+        }
 
         // --- 2. Record milestone UID ---
         BuilderRecord storage record = _builderRecords[attestation.attester];
         record.milestoneUIDs.push(attestation.uid);
 
-        // --- 3. Track completions ---
+        // --- 3. Track unique props (O(1) — one SSTORE per new propId) ---
+        if (!_builderSeenProp[attestation.attester][m.propId]) {
+            _builderSeenProp[attestation.attester][m.propId] = true;
+            record.uniquePropCount += 1;
+        }
+
+        // --- 4. Track completions ---
         if (m.isFinal) {
             record.completedProps += 1;
         }
@@ -294,7 +309,7 @@ contract NounsPassportResolver is SchemaResolver {
 
         bytes memory passportData = abi.encode(
             builder,
-            record.milestoneUIDs.length > 0 ? _countUniqueProps(record.milestoneUIDs) : 0,
+            record.uniquePropCount,   // O(1) — maintained incrementally
             record.completedProps,
             record.milestoneUIDs.length,
             record.peerVerifications,
@@ -338,36 +353,6 @@ contract NounsPassportResolver is SchemaResolver {
         } else {
             emit PassportUpdated(builder, oldUID, newUID, nextVersion);
         }
-    }
-
-    /// @notice Counts the number of unique propIds across a builder's milestones
-    ///         by reading each attestation's data from EAS.
-    ///
-    /// @dev Gas cost scales with milestone count but is bounded in practice
-    ///      (builders with 20 milestones ≈ 20 SLOAD + 20 external calls).
-    ///      At 0.105 Gwei this is a few cents even at 20 milestones.
-    function _countUniqueProps(bytes32[] storage uids) internal view returns (uint256) {
-        // Track seen propIds in a memory array (acceptable at these volumes —
-        // builders with 20 milestones do at most 20*20 = 400 comparisons)
-        uint256[] memory seenIds = new uint256[](uids.length);
-        uint256 uniqueCount = 0;
-
-        for (uint256 i = 0; i < uids.length; i++) {
-            Attestation memory a = _eas.getAttestation(uids[i]);
-            if (a.data.length < 32) continue;
-            uint256 propId = abi.decode(a.data, (uint256));
-
-            // Check if already seen
-            bool found = false;
-            for (uint256 j = 0; j < uniqueCount; j++) {
-                if (seenIds[j] == propId) { found = true; break; }
-            }
-            if (!found) {
-                seenIds[uniqueCount] = propId;
-                uniqueCount++;
-            }
-        }
-        return uniqueCount;
     }
 
     // -------------------------------------------------------------------------

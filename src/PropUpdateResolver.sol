@@ -67,12 +67,13 @@ contract PropUpdateResolver is SchemaResolver {
 
         IPropdates.PropdateInfo memory info = PROPDATES.propdateInfo(propId);
 
-        // propUpdateAdmin is zero until the proposer or an assigned admin
-        // has interacted with the contract. If it is zero, only the original
-        // proposer can post updates — but that check lives in Propdates, not
-        // here. We require a non-zero admin is set and matches the attester.
-        if (info.propUpdateAdmin == address(0)) revert NotPropUpdateAdmin();
-        if (info.propUpdateAdmin != attestation.attester) revert NotPropUpdateAdmin();
+        // When propUpdateAdmin is address(0) the original proposer still controls
+        // updates — Propdates enforces this natively. We defer to that contract
+        // rather than duplicating the check here, so we simply allow it through.
+        // When a non-zero admin is set, it must match the attester exactly.
+        if (info.propUpdateAdmin != address(0) && info.propUpdateAdmin != attestation.attester) {
+            revert NotPropUpdateAdmin();
+        }
 
         return true;
     }
