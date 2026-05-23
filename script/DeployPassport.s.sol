@@ -32,13 +32,21 @@ contract DeployPassport is Script {
     // Mainnet addresses (do not change)
     // -------------------------------------------------------------------------
 
-    /// @dev EAS v0.26 on Ethereum mainnet
-    address constant EAS             = 0xA1207F3BBa224E2c9c3c6D5aF63D0eb1582Ce587;
-    address constant SCHEMA_REGISTRY = 0xA7b39296258348C78294F95B872b282326A97BDF;
+    /// @dev EAS v0.26 — mainnet addresses (Sepolia overridden in run() via block.chainid)
+    address constant EAS_MAINNET             = 0xA1207F3BBa224E2c9c3c6D5aF63D0eb1582Ce587;
+    address constant SCHEMA_REGISTRY_MAINNET = 0xA7b39296258348C78294F95B872b282326A97BDF;
 
-    /// @dev Nouns ecosystem contracts
-    address constant PROPDATES       = 0xa5Bf9A9b8f60CFD98b1cCB592f2F9F37Bb0033a4;
-    address constant NOUNS_TOKEN     = 0x9C8fF314C9Bc7F6e59A9d9225Fb22946427eDC03;
+    address constant EAS_SEPOLIA             = 0xC2679fBD37d54388Ce493F1DB75320D236e1815e;
+    address constant SCHEMA_REGISTRY_SEPOLIA = 0x0a7E2Ff54e76B8E6659aedc9103FB21c038050D0;
+
+    /// @dev Nouns ecosystem contracts (mainnet only — Sepolia uses placeholder EOAs)
+    address constant PROPDATES_MAINNET   = 0xa5Bf9A9b8f60CFD98b1cCB592f2F9F37Bb0033a4;
+    address constant NOUNS_TOKEN_MAINNET = 0x9C8fF314C9Bc7F6e59A9d9225Fb22946427eDC03;
+
+    /// @dev On Sepolia these contracts don't exist — resolvers deploy but won't
+    ///      enforce Propdates/NounsToken rules. For integration testing only.
+    address constant PROPDATES_SEPOLIA   = address(0);
+    address constant NOUNS_TOKEN_SEPOLIA = address(0);
 
     // -------------------------------------------------------------------------
     // Schema strings — must match exactly what is encoded in attestations
@@ -64,8 +72,14 @@ contract DeployPassport is Script {
     function run() external {
         vm.startBroadcast();
 
-        ISchemaRegistry registry = ISchemaRegistry(SCHEMA_REGISTRY);
-        IEAS eas = IEAS(EAS);
+        bool isSepolia = block.chainid == 11155111;
+        address easAddr        = isSepolia ? EAS_SEPOLIA             : EAS_MAINNET;
+        address registryAddr   = isSepolia ? SCHEMA_REGISTRY_SEPOLIA : SCHEMA_REGISTRY_MAINNET;
+        address propdatesAddr  = isSepolia ? PROPDATES_SEPOLIA       : PROPDATES_MAINNET;
+        address nounsTokenAddr = isSepolia ? NOUNS_TOKEN_SEPOLIA     : NOUNS_TOKEN_MAINNET;
+
+        ISchemaRegistry registry = ISchemaRegistry(registryAddr);
+        IEAS eas = IEAS(easAddr);
 
         // ── Step 1: Deploy NounsPassportResolver first (Schema 1 resolver) ──
         // It needs to exist before Schema 1 is registered so its address can
@@ -73,7 +87,7 @@ contract DeployPassport is Script {
         console2.log("Deploying NounsPassportResolver...");
         NounsPassportResolver passportResolver = new NounsPassportResolver(
             eas,
-            IPropdates(PROPDATES)
+            IPropdates(propdatesAddr)
         );
         console2.log("NounsPassportResolver:", address(passportResolver));
 
@@ -85,7 +99,7 @@ contract DeployPassport is Script {
         console2.log("Deploying PropUpdateResolver...");
         PropUpdateResolver propUpdateResolver = new PropUpdateResolver(
             eas,
-            IPropdates(PROPDATES)
+            IPropdates(propdatesAddr)
         );
         console2.log("PropUpdateResolver:", address(propUpdateResolver));
 
@@ -93,7 +107,7 @@ contract DeployPassport is Script {
         console2.log("Deploying NounHolderResolver...");
         NounHolderResolver nounHolderResolver = new NounHolderResolver(
             eas,
-            INounsToken(NOUNS_TOKEN)
+            INounsToken(nounsTokenAddr)
         );
         console2.log("NounHolderResolver:", address(nounHolderResolver));
 
