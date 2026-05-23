@@ -4,6 +4,7 @@ pragma solidity ^0.8.19;
 import { SchemaResolver } from "@ethereum-attestation-service/eas-contracts/contracts/resolver/SchemaResolver.sol";
 import { IEAS, Attestation } from "@ethereum-attestation-service/eas-contracts/contracts/IEAS.sol";
 import { INounsToken } from "./interfaces/INounsToken.sol";
+import { INounsPassportResolver } from "./interfaces/INounsPassportResolver.sol";
 
 /// @title NounHolderResolver
 /// @notice Schema 2 resolver — verifies that the attester currently holds at
@@ -26,12 +27,20 @@ contract NounHolderResolver is SchemaResolver {
     /// @notice Thrown when milestoneUID cannot be decoded from attestation data
     error InvalidAttestationData();
 
+    /// @notice Thrown when passport resolver is already set
+    error AlreadyConfigured();
+
     // -------------------------------------------------------------------------
     // State
     // -------------------------------------------------------------------------
 
     /// @notice The deployed NounsToken contract on Ethereum mainnet
     INounsToken public immutable NOUNS_TOKEN;
+    address public immutable OWNER;
+
+    /// @notice The passport resolver to notify on successful peer verification.
+    ///         Optional — if not set, the resolver works standalone.
+    INounsPassportResolver public passportResolver;
 
     /// @notice Tracks whether an address has a live (non-revoked) attestation
     ///         for a given milestoneUID.
@@ -47,6 +56,19 @@ contract NounHolderResolver is SchemaResolver {
     /// @param nounsToken The NounsToken address (mainnet: 0x9C8fF314C9Bc7F6e59A9d9225Fb22946427eDC03)
     constructor(IEAS eas, INounsToken nounsToken) SchemaResolver(eas) {
         NOUNS_TOKEN = nounsToken;
+        OWNER = msg.sender;
+    }
+
+    // -------------------------------------------------------------------------
+    // Configuration
+    // -------------------------------------------------------------------------
+
+    /// @notice Wire up the passport resolver. One-time set, owner only.
+    /// @param resolver The deployed NounsPassportResolver address
+    function setPassportResolver(address resolver) external {
+        require(msg.sender == OWNER, "NounHolderResolver: not owner");
+        if (address(passportResolver) != address(0)) revert AlreadyConfigured();
+        passportResolver = INounsPassportResolver(resolver);
     }
 
     // -------------------------------------------------------------------------
@@ -86,6 +108,16 @@ contract NounHolderResolver is SchemaResolver {
 
         // 4. Record the attestation UID so we can clear it on revocation
         nounerMilestoneAttestation[attestation.attester][milestoneUID] = attestation.uid;
+
+        // 5. Notify passport resolver (if wired up)
+        //    We decode the builder from the referenced milestone attestation.
+        //    The milestone attester IS the builder.
+        if (address(passportResolver) != address(0)) {
+            Attestation memory milestone = _eas.getAttestation(milestoneUID);
+            if (milestone.attester != address(0)) {
+                passportResolver.incrementPeerVerification(milestone.attester);
+            }
+        }
 
         return true;
     }
