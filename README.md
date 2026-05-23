@@ -13,9 +13,9 @@ EAS × Propdates — fully on-chain builder reputation for Nouns DAO.
 ## Live addresses (post-deploy — fill in after running DeployPassport.s.sol)
 
 ```
-NounsPassportResolver: 
-PropUpdateResolver:    
-NounHolderResolver:    
+NounsPassportResolver: 0xc73b1fe64638fe415db2985a4a3b1f0bebaafd33
+PropUpdateResolver:    0x4960e774ad4290eab05df6dea277fef0c1a26125
+NounHolderResolver:    0xc0edb7b49409936385da7bb623ca3c50482cfdf0
 Schema 1 UID:          
 Schema 2 UID:          
 Schema 3 UID:          
