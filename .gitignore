@@ -1,0 +1,9 @@
+# Build artifacts
+out/
+cache/
+
+# Environment
+.env
+
+# Foundry
+broadcast/*/dry-run/
