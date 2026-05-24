@@ -16,9 +16,9 @@ EAS × Propdates — fully on-chain builder reputation for Nouns DAO.
 NounsPassportResolver: 0xc73b1fe64638fe415db2985a4a3b1f0bebaafd33
 PropUpdateResolver:    0x4960e774ad4290eab05df6dea277fef0c1a26125
 NounHolderResolver:    0xc0edb7b49409936385da7bb623ca3c50482cfdf0
-Schema 1 UID:          
-Schema 2 UID:          
-Schema 3 UID:          
+Schema 1 UID:          0x306cb07aebf437bd0d500ab1872353ca22eb3b731a6e7a7d18a3c6fd81a324e7
+Schema 2 UID:          0xe0eb78e32ac8f42aeac4290e57ce179fd73c7508b283d08d39b42f974afac7c7
+Schema 3 UID:          0x13abe245db2dfdb78676907992b5f6bf17a476ad97d265a1f095d739f5bd7c61
 ```
 
 ## Setup
