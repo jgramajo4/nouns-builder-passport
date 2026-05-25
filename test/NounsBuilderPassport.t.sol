@@ -19,6 +19,11 @@ import { NounsPassportResolver }  from "../src/NounsPassportResolver.sol";
 import { IPropdates }             from "../src/interfaces/IPropdates.sol";
 import { INounsToken }            from "../src/interfaces/INounsToken.sol";
 
+// Minimal extension of INounsToken to call delegate() in tests
+interface INounsTokenVotes is INounsToken {
+    function delegate(address delegatee) external;
+}
+
 // ---------------------------------------------------------------------------
 // NounsBuilderPassportTest
 // ---------------------------------------------------------------------------
@@ -500,16 +505,22 @@ contract NounsBuilderPassportTest is Test {
     // Admin / access control tests
     // =========================================================================
 
-    function test_Admin_SetPassportSchemaUID_OnlyOnce() public {
-        // Already set in setUp — trying again should revert
-        vm.expectRevert();
-        passportResolver.setPassportSchemaUID(bytes32(uint256(1)));
+    function test_Admin_SetPassportSchemaUID_Resettable() public {
+        // Already set in setUp — should allow resetting by owner
+        bytes32 newUID = bytes32(uint256(1));
+        passportResolver.setPassportSchemaUID(newUID);
+        assertEq(passportResolver.passportSchemaUID(), newUID, "passportSchemaUID should update");
     }
 
-    function test_Admin_SetPeerVerifier_OnlyOnce() public {
-        // Already set in setUp — trying again should revert
-        vm.expectRevert();
-        passportResolver.setPeerVerifier(address(0x1234));
+    function test_Admin_SetPeerVerifier_Resettable() public {
+        // Owner can update the peer verifier address
+        address newVerifier = address(0x1234);
+        passportResolver.setPeerVerifier(newVerifier);
+        // No getter — attempt an authorized call via new verifier
+        vm.prank(newVerifier);
+        passportResolver.incrementPeerVerification(builder420);
+        (, , , , uint256 count) = passportResolver.getBuilderRecord(builder420);
+        assertEq(count, 1, "peer count should increment via new verifier");
     }
 
     function test_Admin_SetPassportSchemaUID_OnlyOwner() public {
@@ -527,6 +538,34 @@ contract NounsBuilderPassportTest is Test {
         vm.prank(address(0xbad));
         vm.expectRevert();
         fresh.setPeerVerifier(address(0x1234));
+    }
+
+    function test_NounHolderResolver_AllowsDelegatedVotes() public {
+        vm.assume(builder420 != address(0));
+
+        // Prepare secondary delegate address
+        address delegatee = address(0xCA11);
+        // Ensure it holds 0 Nouns initially
+        assertEq(nounsToken.balanceOf(delegatee), 0);
+
+        // Noun holder delegates votes to delegatee
+        vm.startPrank(nounHolder);
+        INounsTokenVotes(address(nounsToken)).delegate(delegatee);
+        vm.stopPrank();
+
+        // Mine one block so vote checkpoint updates
+        vm.roll(block.number + 1);
+
+        // Confirm voting power transferred
+        uint96 votes = uint96(nounsToken.getCurrentVotes(delegatee));
+        assertTrue(votes > 0, "delegatee should have delegated votes");
+
+        // Builder posts milestone
+        bytes32 milestoneUID = _attestMilestone(builder420, 420, false, bytes32(0));
+
+        // Delegatee submits peer verification (Schema 2)
+        bytes32 verifyUID = _attestPeerVerification(delegatee, milestoneUID, 420, true);
+        assertTrue(verifyUID != bytes32(0), "verification should succeed via delegatee");
     }
 
     function test_Admin_IncrementPeerVerification_OnlyAuthorized() public {

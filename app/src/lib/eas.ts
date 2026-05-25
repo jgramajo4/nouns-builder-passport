@@ -57,6 +57,7 @@ export interface PeerVerification {
   milestoneUID: `0x${string}`;
   builder: `0x${string}`;
   propId: bigint;
+  verified: boolean;
   comment?: string;
 }
 
@@ -67,7 +68,7 @@ export async function peerVerify(signer: Signer, data: PeerVerification) {
   const encoded = encoder.encodeData([
     { name: "milestoneUID", value: data.milestoneUID, type: "bytes32" },
     { name: "propId", value: data.propId, type: "uint256" },
-    { name: "verified", value: true, type: "bool" },
+    { name: "verified", value: data.verified, type: "bool" },
     {
       name: "comment",
       value: data.comment ?? "",
@@ -167,6 +168,65 @@ export async function fetchPassport(
     avgDaysBetweenUpdates: get("avgDaysBetweenUpdates") as bigint,
     passportVersion: get("passportVersion") as bigint,
   };
+}
+
+// ── Feed: latest attestations across schemas ──
+export interface FeedAttestation {
+  id: string;
+  attester: string;
+  recipient: string;
+  refUID: string;
+  schemaId: string;
+  time: number; // seconds unix
+  decoded: DecodedField[];
+}
+
+export async function fetchFeed(
+  take = 25,
+  skip = 0,
+): Promise<FeedAttestation[]> {
+  const query = `\n    query FeedAttestations($schema1: String!, $schema2: String!, $schema3: String!, $take: Int!, $skip: Int!) {\n      attestations(\n        where: {\n          schemaId: { in: [$schema1, $schema2, $schema3] }\n          revoked: { equals: false }\n        }\n        orderBy: { time: desc }\n        take: $take\n        skip: $skip\n      ) {\n        id\n        attester\n        recipient\n        refUID\n        schemaId\n        time\n        decodedDataJson\n      }\n    }\n  `;
+  const resp = await fetch(EAS_GRAPHQL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      query,
+      variables: {
+        schema1: SCHEMAS.SCHEMA_1_UID,
+        schema2: SCHEMAS.SCHEMA_2_UID,
+        schema3: SCHEMAS.SCHEMA_3_UID,
+        take,
+        skip,
+      },
+    }),
+  });
+  const json = await resp.json();
+  const atts: any[] = json?.data?.attestations ?? [];
+
+  return atts.map((att) => ({
+    id: att.id,
+    attester: att.attester,
+    recipient: att.recipient,
+    refUID: att.refUID,
+    schemaId: att.schemaId,
+    time: Number(att.time),
+    decoded: safeParse(att.decodedDataJson) as DecodedField[],
+  }));
+}
+
+interface DecodedField {
+  name: string;
+  type: string;
+  value: any;
+}
+
+function safeParse(str: string): DecodedField[] {
+  try {
+    const parsed = JSON.parse(str ?? "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (err) {
+    return [];
+  }
 }
 
 export async function fetchMilestones(

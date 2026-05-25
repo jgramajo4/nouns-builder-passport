@@ -1,7 +1,5 @@
-# omnipin.config.json
-# Deploys dist/ to IPFS + Filecoin, updates nouns-passport.eth contenthash
 {
   "ens": "nounspassport.eth",
   "dist": "./dist",
-  "providers": ["ipfs.ninja"]
+  "providers": ["filebase"]
 }

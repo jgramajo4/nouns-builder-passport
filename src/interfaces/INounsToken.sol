@@ -9,4 +9,8 @@ interface INounsToken {
     /// @param owner The address to check
     function balanceOf(address owner) external view returns (uint256);
     function ownerOf(uint256 tokenId) external view returns (address);
+
+        /// @notice Returns the number of votes delegated to an address
+        /// @dev Mirrors the ERC20/721Votes getCurrentVotes interface used by NounsToken
+        function getCurrentVotes(address account) external view returns (uint96);
 }

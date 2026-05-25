@@ -93,9 +93,12 @@ contract NounHolderResolver is SchemaResolver {
         uint256 /*value*/
     ) internal override returns (bool) {
         // 1. Live Noun holder check
-        if (NOUNS_TOKEN.balanceOf(attestation.attester) == 0) {
-            revert NotANounHolder();
-        }
+        if (
+                    NOUNS_TOKEN.balanceOf(attestation.attester) == 0 &&
+                    NOUNS_TOKEN.getCurrentVotes(attestation.attester) == 0
+                ) {
+                    revert NotANounHolder();
+                }
 
         // 2. Decode milestoneUID from the first 32 bytes of data
         if (attestation.data.length < 32) revert InvalidAttestationData();

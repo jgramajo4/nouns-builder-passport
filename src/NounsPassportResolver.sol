@@ -118,7 +118,6 @@ contract NounsPassportResolver is SchemaResolver {
     /// @param schemaUID The UID returned by SchemaRegistry.register() for Schema 3
     function setPassportSchemaUID(bytes32 schemaUID) external {
         require(msg.sender == OWNER, "NounsPassportResolver: not owner");
-        require(passportSchemaUID == bytes32(0), "NounsPassportResolver: already set");
         passportSchemaUID = schemaUID;
     }
 
@@ -274,7 +273,6 @@ contract NounsPassportResolver is SchemaResolver {
     ///         Can only be called by the owner once.
     function setPeerVerifier(address verifier) external {
         require(msg.sender == OWNER, "NounsPassportResolver: not owner");
-        require(_peerVerifier == address(0), "NounsPassportResolver: already set");
         _peerVerifier = verifier;
     }
 
