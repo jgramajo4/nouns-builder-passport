@@ -26,9 +26,9 @@ export const CONTRACTS = {
   SCHEMA_REGISTRY:
     "0xA7b39296258348C78294F95B872b282326A97BDF" as `0x${string}`,
   NOUNS_PASSPORT_RESOLVER:
-    "0xc73b1fe64638fe415db2985a4a3b1f0bebaafd33" as `0x${string}`,
+    "0x5dF7486e73171D9cE601e67699A0FD42ee8079CA" as `0x${string}`,
   NOUN_HOLDER_RESOLVER:
-    "0xc0edb7b49409936385da7bb623ca3c50482cfdf0" as `0x${string}`,
+    "0x5840FAd8eF928A637ba977F60Bc62c3934f1e020" as `0x${string}`,
   PROP_UPDATE_RESOLVER:
     "0x4960e774ad4290eab05df6dea277fef0c1a26125" as `0x${string}`, // ← deployed resolver addresses
   NOUNS_TOKEN: "0x9C8fF314C9Bc7F6e59A9d9225Fb22946427eDC03" as `0x${string}`,
@@ -38,9 +38,9 @@ export const CONTRACTS = {
 // ── Schema UIDs (fill after deployment) ──
 export const SCHEMAS = {
   SCHEMA_1_UID:
-    "0x306cb07aebf437bd0d500ab1872353ca22eb3b731a6e7a7d18a3c6fd81a324e7" as `0x${string}`, // ← full UID from easscan
+    "0x556665dcc424230647e7bcaa4aa82a7c51d669dc1bbbb242ade8ff0690030cca" as `0x${string}`, // ← full UID from easscan
   SCHEMA_2_UID:
-    "0xe0eb78e32ac8f42aeac4290e57ce179fd73c7508b283d08d39b42f974afac7c7" as `0x${string}`,
+    "0x72d2a84b88f10767eaa88b940bf70e68f7a32893c0982c199138fc8ea6a526fc" as `0x${string}`,
   SCHEMA_3_UID:
     "0x13abe245db2dfdb78676907992b5f6bf17a476ad97d265a1f095d739f5bd7c61" as `0x${string}`,
 } as const;
