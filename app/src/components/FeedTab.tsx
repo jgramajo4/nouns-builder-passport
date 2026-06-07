@@ -3,8 +3,9 @@ import { useFeed } from "../hooks/useFeed";
 import { SCHEMAS } from "../lib/config";
 import { FeedAttestation, attestMilestone, peerVerify } from "../lib/eas";
 import { useDisplayName } from "../hooks/useDisplayName";
-import { useAccount, useConnect } from "wagmi";
+import { useAccount } from "wagmi";
 import { BrowserProvider } from "ethers";
+import { ConnectButton } from "./ConnectButton";
 
 export function FeedTab() {
   const [openId, setOpenId] = useState<string | null>(null);
@@ -371,7 +372,6 @@ interface ActionProps {
 
 function ActionPanel({ att, close, setPeerStatusMap }: ActionProps) {
   const { address } = useAccount();
-  const { connect, connectors, isPending } = useConnect();
   const [comment, setComment] = useState("");
   const [loading, setLoading] = useState(false);
   const [verifiedFlag, setVerifiedFlag] = useState<boolean>(true);
@@ -380,10 +380,6 @@ function ActionPanel({ att, close, setPeerStatusMap }: ActionProps) {
 
   // ── Wallet not connected – show prompt that triggers wagmi connect ──
   if (!address) {
-    // Prefer injected/metamask, fallback to first available
-    const injected =
-      connectors.find((c) => c.id === "injected") ?? connectors[0];
-
     return (
       <div
         style={{
@@ -393,20 +389,7 @@ function ActionPanel({ att, close, setPeerStatusMap }: ActionProps) {
           color: "#F8F4E8",
         }}
       >
-        <button
-          onClick={() => connect({ connector: injected })}
-          disabled={isPending}
-          style={{
-            background: "#FFD94A",
-            color: "#000",
-            fontWeight: 700,
-            border: "2px solid #000",
-            padding: "6px 12px",
-            cursor: "pointer",
-          }}
-        >
-          {isPending ? "Connecting…" : "Connect Wallet"}
-        </button>
+        <ConnectButton />
       </div>
     );
   }
@@ -589,8 +572,6 @@ function ActionPanel({ att, close, setPeerStatusMap }: ActionProps) {
 
     if (!address) {
       // same connect prompt reuse
-      const injected =
-        connectors.find((c) => c.id === "injected") ?? connectors[0];
       return (
         <div
           style={{
@@ -600,20 +581,7 @@ function ActionPanel({ att, close, setPeerStatusMap }: ActionProps) {
             color: "#F8F4E8",
           }}
         >
-          <button
-            onClick={() => connect({ connector: injected })}
-            disabled={isPending}
-            style={{
-              background: "#FFD94A",
-              color: "#000",
-              fontWeight: 700,
-              border: "2px solid #000",
-              padding: "6px 12px",
-              cursor: "pointer",
-            }}
-          >
-            {isPending ? "Connecting…" : "Connect Wallet"}
-          </button>
+          <ConnectButton />
         </div>
       );
     }
