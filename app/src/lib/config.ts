@@ -1,18 +1,41 @@
-import { http, createConfig } from "wagmi";
+import { http, createConfig, type CreateConnectorFn } from "wagmi";
 import { mainnet } from "wagmi/chains";
 import { injected, walletConnect, coinbaseWallet } from "wagmi/connectors";
 
-// Replace with your WalletConnect project ID from https://cloud.walletconnect.com
-const WC_PROJECT_ID =
-  import.meta.env.VITE_WC_PROJECT_ID ?? "YOUR_WC_PROJECT_ID";
+// WalletConnect project ID from https://cloud.walletconnect.com (now Reown).
+// Set VITE_WC_PROJECT_ID in your .env — see .env.example.
+const WC_PROJECT_ID = import.meta.env.VITE_WC_PROJECT_ID as string | undefined;
+
+// A valid project ID is required for the WalletConnect QR modal to open. With
+// the old placeholder ("YOUR_WC_PROJECT_ID") the relay rejects the session and
+// the QR popup never appears, so only register the connector when configured.
+const hasValidWcProjectId =
+  !!WC_PROJECT_ID &&
+  WC_PROJECT_ID !== "YOUR_WC_PROJECT_ID" &&
+  WC_PROJECT_ID.length > 0;
+
+if (!hasValidWcProjectId && typeof window !== "undefined") {
+  console.warn(
+    "[config] VITE_WC_PROJECT_ID is not set — WalletConnect (QR sign-in) is " +
+      "disabled. Get a free project ID at https://cloud.reown.com and add it " +
+      "to your .env to enable the QR popup.",
+  );
+}
+
+const connectors: CreateConnectorFn[] = [
+  injected(),
+  coinbaseWallet({ appName: "Nouns Builder Passport" }),
+];
+
+if (hasValidWcProjectId) {
+  connectors.push(
+    walletConnect({ projectId: WC_PROJECT_ID!, showQrModal: true }),
+  );
+}
 
 export const config = createConfig({
   chains: [mainnet],
-  connectors: [
-    injected(),
-    walletConnect({ projectId: WC_PROJECT_ID }),
-    coinbaseWallet({ appName: "Nouns Builder Passport" }),
-  ],
+  connectors,
   transports: {
     [mainnet.id]: http(
       import.meta.env.VITE_RPC_URL ?? "https://eth.llamarpc.com",

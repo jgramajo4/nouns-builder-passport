@@ -1,6 +1,7 @@
 import React from "react";
-import { useAccount, useConnect, useDisconnect } from "wagmi";
+import { useAccount, useDisconnect } from "wagmi";
 import { useENSProfile } from "../hooks/useENSProfile";
+import { ConnectButton } from "./ConnectButton";
 
 export type Tab =
   | "passport"
@@ -85,16 +86,8 @@ const s = {
 
 export function CDEChrome({ activeTab, onTabChange }: Props) {
   const { address, isConnected } = useAccount();
-  const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   const { displayName } = useENSProfile(address);
-
-  const handleConnect = () => {
-    // prefer injected (MetaMask), fall back to first available
-    const injected =
-      connectors.find((c) => c.id === "injected") ?? connectors[0];
-    if (injected) connect({ connector: injected });
-  };
 
   const shortAddr = isConnected ? displayName : null;
 
@@ -129,24 +122,42 @@ export function CDEChrome({ activeTab, onTabChange }: Props) {
             {t.label}
           </div>
         ))}
-        <button
-          onClick={isConnected ? () => disconnect() : handleConnect}
-          style={{
-            marginLeft: "auto",
-            fontSize: 9,
-            padding: "4px 12px",
-            background: isConnected ? "#0A1E0A" : "#FFD94A",
-            border: isConnected ? "none" : "2px solid #1A1610",
-            borderLeft: isConnected ? "1px solid #3A3020" : undefined,
-            color: isConnected ? "#6ACC70" : "#1A1610",
-            cursor: "pointer",
-            fontFamily: "IBM Plex Mono, monospace",
-            whiteSpace: "nowrap",
-            fontWeight: 700,
-          }}
-        >
-          {isConnected ? shortAddr : "Connect Wallet"}
-        </button>
+        {isConnected ? (
+          <button
+            onClick={() => disconnect()}
+            style={{
+              marginLeft: "auto",
+              fontSize: 9,
+              padding: "4px 12px",
+              background: "#0A1E0A",
+              border: "none",
+              borderLeft: "1px solid #3A3020",
+              color: "#6ACC70",
+              cursor: "pointer",
+              fontFamily: "IBM Plex Mono, monospace",
+              whiteSpace: "nowrap",
+              fontWeight: 700,
+            }}
+          >
+            {shortAddr}
+          </button>
+        ) : (
+          <ConnectButton
+            label="Connect Wallet"
+            wrapperStyle={{ marginLeft: "auto" }}
+            buttonStyle={{
+              fontSize: 9,
+              padding: "4px 12px",
+              background: "#FFD94A",
+              border: "2px solid #1A1610",
+              color: "#1A1610",
+              cursor: "pointer",
+              fontFamily: "IBM Plex Mono, monospace",
+              whiteSpace: "nowrap",
+              fontWeight: 700,
+            }}
+          />
+        )}
       </div>
 
       {/* breadcrumb */}
