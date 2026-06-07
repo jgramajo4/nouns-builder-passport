@@ -2,9 +2,14 @@ import { http, createConfig, type CreateConnectorFn } from "wagmi";
 import { mainnet } from "wagmi/chains";
 import { injected, walletConnect, coinbaseWallet } from "wagmi/connectors";
 
-// WalletConnect project ID from https://cloud.walletconnect.com (now Reown).
-// Set VITE_WC_PROJECT_ID in your .env — see .env.example.
-const WC_PROJECT_ID = import.meta.env.VITE_WC_PROJECT_ID as string | undefined;
+// WalletConnect project ID from https://cloud.reown.com (formerly
+// cloud.walletconnect.com). This is a client-side public value (it ships in
+// the frontend bundle), so it's safe to commit. Override per-environment with
+// VITE_WC_PROJECT_ID — see .env.example. Restrict allowed domains in the Reown
+// dashboard to prevent other sites from using this ID.
+const WC_PROJECT_ID =
+  (import.meta.env.VITE_WC_PROJECT_ID as string | undefined) ??
+  "5cdfce5db0fa7f3dc464497df4cf267e";
 
 // A valid project ID is required for the WalletConnect QR modal to open. With
 // the old placeholder ("YOUR_WC_PROJECT_ID") the relay rejects the session and
