@@ -45,7 +45,7 @@ function TxStrip({ state }: { state: TxState }) {
 export function AttestTab() {
   const { address, isConnected } = useAccount()
   const { data: walletClient } = useWalletClient()
-  const { isNounHolder } = useNounBalance(address)
+  const { isEligible } = useNounBalance(address)
 
   const [form, setForm] = useState({ propId: '', title: '', evidenceURI: '', txHash: '', isFinal: false })
   const [tx, setTx]   = useState<TxState>({ status: 'idle', msg: '' })
@@ -141,7 +141,7 @@ export function AttestTab() {
 
       {/* challenge */}
       <div style={{ fontSize: 8, fontWeight: 700, color: '#6A5A38', textTransform: 'uppercase', letterSpacing: '0.8px', margin: '8px 0 4px', paddingBottom: 2, borderBottom: '1px solid #3A3020', fontFamily: mono }}>
-        Challenge completion — Noun holders only
+        Challenge completion — Noun holders & delegates only
       </div>
       <div style={fp}>
         <Field label="Schema 1 UID">
@@ -151,8 +151,8 @@ export function AttestTab() {
           <input style={inputStyle} type="text" placeholder="Link to missing deliverable" />
         </Field>
         <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-          <button style={btn(false, true)} onClick={submitChallenge} disabled={!isNounHolder}>⚑ Submit Challenge</button>
-          {!isNounHolder && <span style={{ fontSize: 9, color: '#6A5A38', fontFamily: mono }}>Requires ≥1 Noun</span>}
+          <button style={btn(false, true)} onClick={submitChallenge} disabled={!isEligible}>⚑ Submit Challenge</button>
+          {!isEligible && <span style={{ fontSize: 9, color: '#6A5A38', fontFamily: mono }}>Requires ≥1 Noun held or delegated</span>}
         </div>
         <TxStrip state={cTx} />
       </div>
