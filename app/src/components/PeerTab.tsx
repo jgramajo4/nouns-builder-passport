@@ -46,7 +46,7 @@ function FolderIcon({ done }: { done: boolean }) {
 export function PeerTab() {
   const { address, isConnected } = useAccount();
   const { data: walletClient } = useWalletClient();
-  const { isNounHolder, balance } = useNounBalance(address);
+  const { isEligible, isNounHolder, balance, votes } = useNounBalance(address);
   const [builderAddr, setBuilderAddr] = useState("");
   const [milestones, setMilestones] = useState<MilestoneData[]>([]);
   const [loading, setLoading] = useState(false);
@@ -113,13 +113,17 @@ export function PeerTab() {
 
   return (
     <div>
-      {isConnected && isNounHolder ? (
+      {isConnected && isEligible ? (
         <div style={noticeStyle(true)}>
-          ✓ Wallet connected — {String(balance)} Nouns. Eligible to verify.
+          ✓ Wallet connected —{" "}
+          {isNounHolder
+            ? `${String(balance)} Nouns`
+            : `delegated voting power: ${String(votes)}`}
+          . Eligible to verify.
         </div>
       ) : (
         <div style={noticeStyle(false)}>
-          ⚠ Must hold ≥1 Noun to peer verify.{" "}
+          ⚠ Must hold or be delegated ≥1 Noun to peer verify.{" "}
           {!isConnected ? "Connect wallet first." : ""}
         </div>
       )}
@@ -375,8 +379,8 @@ export function PeerTab() {
               fontFamily: mono,
             }}
           >
-            Anchored to your Noun balance at this block. One verification per
-            holder per milestone (NounHolderResolver).
+            Anchored to your Noun balance or delegated votes at this block. One
+            verification per holder per milestone (NounHolderResolver).
           </div>
 
           {/* verified toggle */}
@@ -439,7 +443,7 @@ export function PeerTab() {
           {/* submit */}
           <button
             onClick={submit}
-            disabled={!isNounHolder}
+            disabled={!isEligible}
             style={{
               fontFamily: mono,
               fontSize: 10,
@@ -453,7 +457,7 @@ export function PeerTab() {
           >
             ◉ Submit Peer Verification
           </button>
-          {!isNounHolder && (
+          {!isEligible && (
             <span
               style={{
                 marginLeft: 8,
@@ -462,7 +466,7 @@ export function PeerTab() {
                 fontFamily: mono,
               }}
             >
-              Requires ≥1 Noun
+              Requires ≥1 Noun held or delegated
             </span>
           )}
           {tx.status !== "idle" && (
