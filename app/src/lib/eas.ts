@@ -229,6 +229,47 @@ function safeParse(str: string): DecodedField[] {
   }
 }
 
+// Look up a single Schema 1 milestone by its attestation UID. Used by the
+// challenge flow, which only has the isFinal UID to hand and needs the
+// builder (attester) + propId to build the Schema 2 payload.
+export async function fetchMilestoneByUID(
+  uid: string,
+): Promise<MilestoneData | null> {
+  const query = `
+    query MilestoneByUID($id: String!) {
+      attestation(where: { id: $id }) {
+        id
+        data
+        attester
+        time
+      }
+    }
+  `;
+  const resp = await fetch(EAS_GRAPHQL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query, variables: { id: uid } }),
+  });
+  const json = await resp.json();
+  const att = json?.data?.attestation;
+  if (!att) return null;
+
+  const decoder = new SchemaEncoder(SCHEMA_STRINGS.SCHEMA_1);
+  const decoded = decoder.decodeData(att.data);
+  const get = (name: string) =>
+    decoded.find((d) => d.name === name)?.value.value;
+  return {
+    uid: att.id,
+    propId: get("propId") as bigint,
+    milestoneTitle: get("milestoneTitle") as string,
+    evidenceURI: get("evidenceURI") as string,
+    isFinal: get("isFinal") as boolean,
+    propdateTxHash: get("propdateTxHash") as string,
+    attester: att.attester as `0x${string}`,
+    time: BigInt(att.time),
+  };
+}
+
 export async function fetchMilestones(
   builderAddress: string,
 ): Promise<MilestoneData[]> {

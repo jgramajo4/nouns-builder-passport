@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useAccount, useWalletClient } from 'wagmi'
 import { BrowserProvider } from 'ethers'
-import { attestMilestone } from '../lib/eas'
+import { attestMilestone, fetchMilestoneByUID, peerVerify } from '../lib/eas'
 import { useNounBalance } from '../hooks/useNounBalance'
 
 type TxState = { status: 'idle' | 'pending' | 'ok' | 'error'; msg: string }
@@ -48,11 +48,15 @@ export function AttestTab() {
   const { isEligible } = useNounBalance(address)
 
   const [form, setForm] = useState({ propId: '', title: '', evidenceURI: '', txHash: '', isFinal: false })
+  const [challenge, setChallenge] = useState({ milestoneUID: '', evidence: '' })
   const [tx, setTx]   = useState<TxState>({ status: 'idle', msg: '' })
   const [cTx, setCTx] = useState<TxState>({ status: 'idle', msg: '' })
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(f => ({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }))
+
+  const setC = (k: keyof typeof challenge) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setChallenge(c => ({ ...c, [k]: e.target.value }))
 
   const submit = async () => {
     if (!form.propId) return alert('Enter a Prop ID')
@@ -64,11 +68,11 @@ export function AttestTab() {
       const signer = await provider.getSigner()
       setTx({ status: 'pending', msg: 'Transaction submitted, waiting for block…' })
       const uid = await attestMilestone(signer, {
-        propId:      BigInt(form.propId),
-        title:       form.title,
-        evidenceURI: form.evidenceURI,
-        isFinal:     form.isFinal,
-        txHash:      (form.txHash || '0x' + '0'.repeat(64)) as `0x${string}`,
+        propId:         BigInt(form.propId),
+        milestoneTitle: form.title,
+        evidenceURI:    form.evidenceURI,
+        isFinal:        form.isFinal,
+        propdateTxHash: (form.txHash || '0x' + '0'.repeat(64)) as `0x${string}`,
       })
       setTx({ status: 'ok', msg: `Attestation confirmed. UID: ${String(uid).slice(0, 18)}…` })
       setForm({ propId: '', title: '', evidenceURI: '', txHash: '', isFinal: false })
@@ -78,9 +82,33 @@ export function AttestTab() {
   }
 
   const submitChallenge = async () => {
-    setCTx({ status: 'pending', msg: 'Submitting challenge attestation…' })
-    // TODO: wire challenge attestation — same pattern as peerVerify with challenge flag
-    setTimeout(() => setCTx({ status: 'ok', msg: 'Challenge attested. Linked to isFinal UID.' }), 1800)
+    const uid = challenge.milestoneUID.trim()
+    if (!/^0x[0-9a-fA-F]{64}$/.test(uid)) return alert('Enter the Schema 1 (isFinal) attestation UID')
+    if (!walletClient || !isConnected) return alert('Connect wallet first')
+    if (!isEligible) return alert('Requires ≥1 Noun held or delegated')
+    try {
+      // A challenge is a Schema 2 peer verification with verified=false,
+      // ref'd to the milestone. We only have the UID, so fetch the milestone
+      // to recover the builder (attester) and propId for the payload.
+      setCTx({ status: 'pending', msg: 'Looking up milestone…' })
+      const milestone = await fetchMilestoneByUID(uid)
+      if (!milestone) throw new Error('No milestone found for that UID')
+
+      const provider = new BrowserProvider(walletClient as any)
+      const signer = await provider.getSigner()
+      setCTx({ status: 'pending', msg: 'Awaiting wallet signature…' })
+      const cUid = await peerVerify(signer, {
+        milestoneUID: uid as `0x${string}`,
+        builder:      milestone.attester,
+        propId:       milestone.propId,
+        verified:     false,
+        comment:      challenge.evidence.trim() === '' ? undefined : challenge.evidence.trim(),
+      })
+      setCTx({ status: 'ok', msg: `Challenge attested. UID: ${String(cUid).slice(0, 18)}…` })
+      setChallenge({ milestoneUID: '', evidence: '' })
+    } catch (e: any) {
+      setCTx({ status: 'error', msg: e?.message?.slice(0, 80) ?? 'Transaction failed' })
+    }
   }
 
   const fp: React.CSSProperties = { background: '#242018', border: '1px solid #3A3020', padding: '8px 10px', marginBottom: 6 }
@@ -145,10 +173,10 @@ export function AttestTab() {
       </div>
       <div style={fp}>
         <Field label="Schema 1 UID">
-          <input style={inputStyle} type="text" placeholder="0x… (the isFinal attestation)" />
+          <input style={inputStyle} type="text" placeholder="0x… (the isFinal attestation)" value={challenge.milestoneUID} onChange={setC('milestoneUID')} />
         </Field>
         <Field label="Evidence">
-          <input style={inputStyle} type="text" placeholder="Link to missing deliverable" />
+          <input style={inputStyle} type="text" placeholder="Link to missing deliverable" value={challenge.evidence} onChange={setC('evidence')} />
         </Field>
         <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
           <button style={btn(false, true)} onClick={submitChallenge} disabled={!isEligible}>⚑ Submit Challenge</button>

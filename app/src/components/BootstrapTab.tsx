@@ -50,11 +50,11 @@ export function BootstrapTab() {
       setProps(p => { const n = [...p]; n[i] = { ...n[i], status: 'attesting' }; return n })
       try {
         await attestMilestone(signer, {
-          propId:      BigInt(props[i].propId),
-          title:       props[i].title,
-          evidenceURI: props[i].evidenceURI || '',
-          isFinal:     true,
-          txHash:      (props[i].txHash || '0x' + '0'.repeat(64)) as `0x${string}`,
+          propId:         BigInt(props[i].propId),
+          milestoneTitle: props[i].title,
+          evidenceURI:    props[i].evidenceURI || '',
+          isFinal:        true,
+          propdateTxHash: (props[i].txHash || '0x' + '0'.repeat(64)) as `0x${string}`,
         })
         setProps(p => { const n = [...p]; n[i] = { ...n[i], status: 'done' }; return n })
         doneCount++
