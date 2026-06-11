@@ -68,11 +68,11 @@ export function AttestTab() {
       const signer = await provider.getSigner()
       setTx({ status: 'pending', msg: 'Transaction submitted, waiting for block…' })
       const uid = await attestMilestone(signer, {
-        propId:      BigInt(form.propId),
-        title:       form.title,
-        evidenceURI: form.evidenceURI,
-        isFinal:     form.isFinal,
-        txHash:      (form.txHash || '0x' + '0'.repeat(64)) as `0x${string}`,
+        propId:         BigInt(form.propId),
+        milestoneTitle: form.title,
+        evidenceURI:    form.evidenceURI,
+        isFinal:        form.isFinal,
+        propdateTxHash: (form.txHash || '0x' + '0'.repeat(64)) as `0x${string}`,
       })
       setTx({ status: 'ok', msg: `Attestation confirmed. UID: ${String(uid).slice(0, 18)}…` })
       setForm({ propId: '', title: '', evidenceURI: '', txHash: '', isFinal: false })
